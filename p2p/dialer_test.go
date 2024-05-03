@@ -66,7 +66,7 @@ func TestDialer_Dial(t *testing.T) {
 		ct := pkgtest.NewConcurrent(t)
 
 		go ct.Stage("accept", func(rt pkgtest.ConcT) {
-			conn, err := listener.Accept()
+			conn, err := listener.Accept(perunio.Serializer())
 			assert.NoError(t, err)
 			require.NotNil(rt, conn)
 
