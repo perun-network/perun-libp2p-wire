@@ -8,7 +8,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.3.3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.9.0
-	perun.network/go-perun v0.11.0
+	perun.network/go-perun v0.10.6
 	polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37
 )
 

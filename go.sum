@@ -629,7 +629,7 @@ honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.1-2019.2.3 h1:3JgtbtFHMiCmsznwGVTUWbgGov+pVqnlf1dEJTNAXeM=
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
-perun.network/go-perun v0.11.0 h1:25aL0MsyXQ2rHziOnMwJMe70K6NTCbopZMwX67qxt/k=
-perun.network/go-perun v0.11.0/go.mod h1:pY/1pJ2OMlCQgEbnfGh9wVfRMJtqN0iAKsiJBLH0/Gc=
+perun.network/go-perun v0.10.6 h1:uj1e33yfCSfE75DK/uwjNp+TwvGG85Qhi6HuYQ9EPrQ=
+perun.network/go-perun v0.10.6/go.mod h1:BGBZC3npkX457u87pjDd0NEIXr1a4dsH4H/YpLdGGe8=
 polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37 h1:iA5GzEa/hHfVlQpimEjPV09NATwHXxSjWNB0VVodtew=
 polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37/go.mod h1:XUBrNtqgEhN3EEOP/5gh7IBd3xVHKidCjXDZfl9+kMU=
