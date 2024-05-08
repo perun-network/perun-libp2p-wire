@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	perunio "perun.network/go-perun/wire/perunio/serializer"
 
 	ctxtest "polycry.pt/poly-go/context/test"
 )
@@ -35,7 +36,7 @@ func TestListener_Accept(t *testing.T) {
 		defer l.Close()
 
 		ctxtest.AssertNotTerminates(t, timeout, func() {
-			l.Accept()
+			l.Accept(perunio.Serializer())
 		})
 	})
 
@@ -44,7 +45,7 @@ func TestListener_Accept(t *testing.T) {
 		l.Close()
 
 		ctxtest.AssertTerminates(t, timeout, func() {
-			conn, err := l.Accept()
+			conn, err := l.Accept(perunio.Serializer())
 			assert.Nil(t, conn)
 			assert.Error(t, err)
 		})

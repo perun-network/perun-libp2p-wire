@@ -18,7 +18,7 @@ import (
 func TestNewDialer(t *testing.T) {
 	h := getHost(t)
 
-	d := NewP2PDialer(h)
+	d := NewP2PDialer(h, relayID, h.relayAddr)
 	assert.NotNil(t, d)
 	d.Close()
 }
@@ -28,7 +28,7 @@ func TestDialer_Register(t *testing.T) {
 	addr := NewRandomAddress(rng)
 	key := wire.Key(addr)
 	h := getHost(t)
-	d := NewP2PDialer(h)
+	d := NewP2PDialer(h, relayID, h.relayAddr)
 	defer d.Close()
 
 	_, ok := d.get(key)
@@ -47,15 +47,14 @@ func TestDialer_Dial(t *testing.T) {
 
 	lHost := getHost(t)
 	lAddr := lHost.Address()
-	lP2PAddr, err := getHostMA(lHost)
-	require.NoError(t, err)
+	lpeerID := lHost.ID()
 	listener := NewP2PListener(lHost)
 	defer listener.Close()
 
 	dHost := getHost(t)
 	dAddr := dHost.Address()
-	dialer := NewP2PDialer(dHost)
-	dialer.Register(lAddr, lP2PAddr.String())
+	dialer := NewP2PDialer(dHost, relayID, dHost.relayAddr)
+	dialer.Register(lAddr, lpeerID.String())
 	defer dialer.Close()
 
 	t.Run("happy", func(t *testing.T) {
@@ -66,7 +65,7 @@ func TestDialer_Dial(t *testing.T) {
 		ct := pkgtest.NewConcurrent(t)
 
 		go ct.Stage("accept", func(rt pkgtest.ConcT) {
-			conn, err := listener.Accept()
+			conn, err := listener.Accept(perunio.Serializer())
 			assert.NoError(t, err)
 			require.NotNil(rt, conn)
 
@@ -122,7 +121,7 @@ func TestDialer_Dial(t *testing.T) {
 func TestDialer_Close(t *testing.T) {
 	t.Run("double close", func(t *testing.T) {
 		h := getHost(t)
-		d := NewP2PDialer(h)
+		d := NewP2PDialer(h, relayID, h.relayAddr)
 
 		assert.NoError(t, d.Close(), "first close must not return error")
 		assert.Error(t, d.Close(), "second close must result in error")

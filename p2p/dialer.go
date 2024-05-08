@@ -15,33 +15,43 @@ import (
 
 // Dialer is a dialer for p2p connections.
 type Dialer struct {
-	mutex  sync.RWMutex // Protects peers.
-	peers  map[wire.AddrKey]string
-	host   host.Host
-	closer pkgsync.Closer
+	mutex     sync.RWMutex // Protects peers.
+	peers     map[wire.AddrKey]string
+	host      host.Host
+	relayID   string
+	relayAddr string
+	closer    pkgsync.Closer
 }
 
 // NewP2PDialer creates a new dialer for the given account.
-func NewP2PDialer(acc *Account) *Dialer {
+func NewP2PDialer(acc *Account, relayID string, relayAddr string) *Dialer {
 	return &Dialer{
-		host:  acc,
-		peers: make(map[wire.AddrKey]string),
+		host:      acc,
+		relayID:   relayID,
+		relayAddr: relayAddr,
+		peers:     make(map[wire.AddrKey]string),
 	}
 }
 
 // Dial implements Dialer.Dial().
 func (d *Dialer) Dial(ctx context.Context, addr wire.Address, serializer wire.EnvelopeSerializer) (wirenet.Conn, error) {
-	peerMA, ok := d.get(wire.Key(addr))
+	peerID, ok := d.get(wire.Key(addr))
 	if !ok {
 		return nil, errors.New("peer not found")
 	}
 
-	_peerMA, err := ma.NewMultiaddr(peerMA)
+	_peerID, err := peer.Decode(peerID)
+	if err != nil {
+		return nil, errors.Wrap(err, "peer ID is not valid")
+	}
+
+	fullAddr := d.relayAddr + "/p2p/" + d.relayID + "/p2p-circuit/p2p/" + _peerID.String()
+	peerMultiAddr, err := ma.NewMultiaddr(fullAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse multiaddress of peer")
 	}
 
-	peerAddrInfo, err := peer.AddrInfoFromP2pAddr(_peerMA)
+	peerAddrInfo, err := peer.AddrInfoFromP2pAddr(peerMultiAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "converting peer multiaddress to address info")
 	}
@@ -57,12 +67,12 @@ func (d *Dialer) Dial(ctx context.Context, addr wire.Address, serializer wire.En
 	return wirenet.NewIoConn(s, serializer), nil
 }
 
-// Register registers a p2p multiaddress for a peer wire address.
-func (d *Dialer) Register(addr wire.Address, p2pAddress string) {
+// Register registers a p2p peer id for a peer wire address.
+func (d *Dialer) Register(addr wire.Address, peerID string) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	d.peers[wire.Key(addr)] = p2pAddress
+	d.peers[wire.Key(addr)] = peerID
 }
 
 // Close closes the dialer by closing the underlying libp2p host.
@@ -74,9 +84,9 @@ func (d *Dialer) Close() error {
 }
 
 // get returns the p2p multiaddress for the given address if registered.
-func (d *Dialer) get(addr wire.AddrKey) (p2pAddress string, ok bool) {
+func (d *Dialer) get(addr wire.AddrKey) (peerID string, ok bool) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
-	p2pAddress, ok = d.peers[addr]
+	peerID, ok = d.peers[addr]
 	return
 }
