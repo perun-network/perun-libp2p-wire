@@ -37,7 +37,7 @@ func NewP2PDialer(acc *Account, relayID string, relayAddr string) *Dialer {
 func (d *Dialer) Dial(ctx context.Context, addr wire.Address, serializer wire.EnvelopeSerializer) (wirenet.Conn, error) {
 	peerID, ok := d.get(wire.Key(addr))
 	if !ok {
-		return nil, errors.New("peer not found")
+		return nil, errors.New("failed to dial peer: peer ID not found")
 	}
 
 	_peerID, err := peer.Decode(peerID)
