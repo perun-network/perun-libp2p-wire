@@ -39,22 +39,14 @@ Example usage:
 The `Dialer` requires the other peers to be already "registered" to connect with them. Before dialing, the `Register` must be called. 
 
 Example (register peer before propose a channel with them):
-```go
+````go
 // OpenChannel opens a new channel with the specified peer and funding.
 func (c *PaymentClient) OpenChannel(peer wire.Address, peerID string, amount float64) *PaymentChannel {
-	// We define the channel participants. The proposer has always index 0. Here
-	// we use the on-chain addresses as off-chain addresses, but we could also
-	// use different ones.
-	participants := []wire.Address{c.waddress, peer}
-
+	....
+	```
 	c.net.Dialer.Register(peer, peerID)
-
-	// We create an initial allocation which defines the starting balances.
-	initAlloc := channel.NewAllocation(2, c.currency)
-	initAlloc.SetAssetBalances(c.currency, []channel.Bal{
-		EthToWei(big.NewFloat(amount)), // Our initial balance.
-		big.NewInt(0),                  // Peer's initial balance.
-	})
+	```
+	... 
 
 	// Prepare the channel proposal by defining the channel parameters.
 	challengeDuration := uint64(10) // On-chain challenge duration in seconds.
@@ -79,7 +71,26 @@ func (c *PaymentClient) OpenChannel(peer wire.Address, peerID string, amount flo
 
 	return newPaymentChannel(ch, c.currency)
 }
-```
+````
+
+## Address Ressolver
+A default address resolver was already built-in on the Perun-Relay-Server. You can use the provided APIs in order to `Register`, `Query`, `Deregister` your On-chain (L1) Address (Implementation of [Go-Perun] `wallet.Address`) to get the peer's `wire.Address` (`Peer.ID` of [Go-Libp2p])
+
+**Example:**
+````go
+// Should be used in the initialization of Perun-Client.
+err := acc.RegisterOnChainAddress(onChainAddr)
+
+
+// Query the peer's wire address, given its on-chain address.
+peerID, err := acc.QueryOnChainAddress(peerOnChainAddr)
+
+
+// Deregister the on-chain address, to be used before closing Perun-Client,
+err = acc.DeregisterOnChainAddress(onChainAddr)
+
+````
+
 ## Test
 Some unit tests are provided:
 ```

@@ -1,8 +1,11 @@
 package p2p
 
 import (
+	"bufio"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net"
 
@@ -12,10 +15,17 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"perun.network/go-perun/wallet"
 	"perun.network/go-perun/wire"
 )
 
-const relayID = "QmVCPfUMr98PaaM8qbAQBgJ9jqc7XHpGp7AsyragdFDmgm"
+const (
+	relayID = "QmVCPfUMr98PaaM8qbAQBgJ9jqc7XHpGp7AsyragdFDmgm"
+
+	queryProtocol    = "/address-book/query/1.0.0"    // Protocol for querying the relay-server for a peerID.
+	registerProtocol = "/address-book/register/1.0.0" // Protocol for registering an on-chain address with the relay-server.
+	removeProtocol   = "/address-book/remove/1.0.0"   // Protocol for deregistering an on-chain address with the relay-server.
+)
 
 // Account represents a libp2p wire account.
 type Account struct {
@@ -47,27 +57,9 @@ func (acc *Account) Sign(data []byte) ([]byte, error) {
 
 // NewRandomAccount generates a new random account.
 func NewRandomAccount(rng *rand.Rand) *Account {
-	id, err := peer.Decode(relayID)
+	relayInfo, relayAddr, err := getRelayServerInfo()
 	if err != nil {
-		err = errors.WithMessage(err, "decoding peer id of relay server")
-		return nil
-	}
-
-	// Get the IP address of the relay server.
-	ip, err := net.LookupIP("relay.perun.network")
-	if err != nil {
-		panic(errors.WithMessage(err, "looking up IP address of relay.perun.network"))
-	}
-	relayAddr := "/ip4/" + ip[0].String() + "/tcp/5574"
-
-	relayMultiaddr, err := ma.NewMultiaddr(relayAddr)
-	if err != nil {
-		panic(errors.WithMessage(err, "parsing relay multiadress"))
-	}
-
-	relayInfo := peer.AddrInfo{
-		ID:    id,
-		Addrs: []ma.Multiaddr{relayMultiaddr},
+		panic(err)
 	}
 
 	// Creates a new RSA key pair for this host.
@@ -88,8 +80,138 @@ func NewRandomAccount(rng *rand.Rand) *Account {
 		panic(err)
 	}
 
-	if err := client.Connect(context.Background(), relayInfo); err != nil {
+	if err := client.Connect(context.Background(), *relayInfo); err != nil {
 		panic(errors.WithMessage(err, "connecting to the relay server"))
 	}
 	return &Account{client, relayAddr, prvKey}
+}
+
+// RegisterOnChainAddress registers an on-chain address with the account to the relay-server's address book.
+func (acc *Account) RegisterOnChainAddress(onChainAddr wallet.Address) error {
+	id, err := peer.Decode(relayID)
+	if err != nil {
+		err = errors.WithMessage(err, "decoding peer id of relay server")
+		return err
+	}
+
+	s, err := acc.NewStream(context.Background(), id, registerProtocol)
+	if err != nil {
+		return errors.WithMessage(err, "creating new stream")
+	}
+	defer s.Close()
+
+	var registerData struct {
+		OnChainAddress string
+		PeerID         string
+	}
+	if onChainAddr == nil {
+		return errors.New("on-chain address is nil")
+	}
+	registerData.OnChainAddress = onChainAddr.String()
+	registerData.PeerID = acc.ID().String()
+
+	data, err := json.Marshal(registerData)
+	if err != nil {
+		return errors.WithMessage(err, "marshalling register data")
+	}
+
+	_, err = s.Write(data)
+	if err != nil {
+		return errors.WithMessage(err, "writing register data")
+	}
+
+	return nil
+}
+
+// DeregisterOnChainAddress deregisters an on-chain address with the account from the relay-server's address book.
+func (acc *Account) DeregisterOnChainAddress(onChainAddr wallet.Address) error {
+	relayInfo, _, err := getRelayServerInfo()
+	if err != nil {
+		return errors.WithMessage(err, "getting relay server info")
+	}
+
+	s, err := acc.NewStream(context.Background(), relayInfo.ID, removeProtocol)
+	if err != nil {
+		return errors.WithMessage(err, "creating new stream")
+	}
+	defer s.Close()
+
+	var unregisterData struct {
+		OnChainAddress string
+		PeerID         string
+	}
+	unregisterData.OnChainAddress = onChainAddr.String()
+	unregisterData.PeerID = acc.ID().String()
+
+	data, err := json.Marshal(unregisterData)
+	if err != nil {
+		return errors.WithMessage(err, "marshalling register data")
+	}
+
+	_, err = s.Write(data)
+	if err != nil {
+		return errors.WithMessage(err, "writing register data")
+	}
+
+	return nil
+}
+
+// QueryOnChainAddress queries the relay-server for the peerID of a peer given its on-chain address.
+func (acc *Account) QueryOnChainAddress(onChainAddr wallet.Address) (*Address, error) {
+	id, err := peer.Decode(relayID)
+	if err != nil {
+		err = errors.WithMessage(err, "decoding peer id of relay server")
+		return nil, err
+	}
+
+	s, err := acc.NewStream(context.Background(), id, queryProtocol)
+	if err != nil {
+		return nil, errors.WithMessage(err, "creating new stream")
+	}
+	defer s.Close()
+
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+	rw.WriteString(fmt.Sprintf("%s\n", onChainAddr))
+	rw.Flush()
+
+	str, _ := rw.ReadString('\n')
+	if str == "" {
+		return nil, errors.New("empty response from relay server")
+	}
+	peerIDstr := str[:len(str)-1]
+	peerID, err := peer.Decode(peerIDstr)
+	if err != nil {
+		return nil, errors.WithMessage(err, "decoding peer id")
+	}
+
+	return &Address{peerID}, nil
+}
+
+func getRelayServerInfo() (*peer.AddrInfo, string, error) {
+	id, err := peer.Decode(relayID)
+	if err != nil {
+		err = errors.WithMessage(err, "decoding peer id of relay server")
+		return nil, "", err
+	}
+
+	// Get the IP address of the relay server.
+	ip, err := net.LookupIP("relay.perun.network")
+	if err != nil {
+		err = errors.WithMessage(err, "looking up IP address of relay.perun.network")
+		return nil, "", err
+	}
+	relayAddr := "/ip4/" + ip[0].String() + "/tcp/5574"
+
+	relayMultiaddr, err := ma.NewMultiaddr(relayAddr)
+	if err != nil {
+		err = errors.WithMessage(err, "parsing relay multiadress")
+		return nil, "", err
+	}
+
+	relayInfo := &peer.AddrInfo{
+		ID:    id,
+		Addrs: []ma.Multiaddr{relayMultiaddr},
+	}
+
+	return relayInfo, relayAddr, nil
 }
