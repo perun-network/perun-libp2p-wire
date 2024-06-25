@@ -209,3 +209,18 @@ func TestAddressBookRegisterQueryMultiple(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 }
+
+// Test NewAccountFromPrivateKey
+func TestNewAccountFromPrivateKey(t *testing.T) {
+	rng := pkgtest.Prng(t)
+	acc := NewRandomAccount(rng)
+	assert.NotNil(t, acc)
+
+	keyBytes, err := acc.MarshalPrivateKey()
+	assert.NoError(t, err)
+
+	acc2, err := NewAccountFromPrivateKeyBytes(keyBytes)
+	assert.NoError(t, err)
+	assert.NotNil(t, acc2)
+	assert.Equal(t, acc.ID(), acc2.ID())
+}

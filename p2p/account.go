@@ -55,6 +55,41 @@ func (acc *Account) Sign(data []byte) ([]byte, error) {
 
 }
 
+// MarshalPrivateKey marshals the account's private key to binary.
+func (acc *Account) MarshalPrivateKey() ([]byte, error) {
+	return crypto.MarshalPrivateKey(acc.privateKey)
+}
+
+// NewAccountFromPrivateKeyBytes creates a new account from a given private key.
+func NewAccountFromPrivateKeyBytes(prvKeyBytes []byte) (*Account, error) {
+	prvKey, err := crypto.UnmarshalPrivateKey(prvKeyBytes)
+	if err != nil {
+		return nil, errors.WithMessage(err, "unmarshalling private key")
+	}
+
+	relayInfo, relayAddr, err := getRelayServerInfo()
+	if err != nil {
+		panic(err)
+	}
+	// Construct a new libp2p client for our relay-server.
+	// Identity(prvKey)		- Use a RSA private key to generate the ID of the host.
+	// EnableRelay()		- Enable relay system and configures itself as a node behind a NAT
+	client, err := libp2p.New(
+		context.Background(),
+		libp2p.Identity(prvKey),
+		libp2p.EnableRelay(),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "creating new libp2p client")
+	}
+
+	if err := client.Connect(context.Background(), *relayInfo); err != nil {
+		client.Close()
+		return nil, errors.WithMessage(err, "connecting to the relay server")
+	}
+	return &Account{client, relayAddr, prvKey}, nil
+}
+
 // NewRandomAccount generates a new random account.
 func NewRandomAccount(rng *rand.Rand) *Account {
 	relayInfo, relayAddr, err := getRelayServerInfo()
@@ -77,10 +112,12 @@ func NewRandomAccount(rng *rand.Rand) *Account {
 		libp2p.EnableRelay(),
 	)
 	if err != nil {
+		client.Close()
 		panic(err)
 	}
 
 	if err := client.Connect(context.Background(), *relayInfo); err != nil {
+		client.Close()
 		panic(errors.WithMessage(err, "connecting to the relay server"))
 	}
 	return &Account{client, relayAddr, prvKey}
@@ -121,6 +158,11 @@ func (acc *Account) RegisterOnChainAddress(onChainAddr wallet.Address) error {
 	}
 
 	return nil
+}
+
+// Close closes the account.
+func (acc *Account) Close() error {
+	return acc.Close()
 }
 
 // DeregisterOnChainAddress deregisters an on-chain address with the account from the relay-server's address book.
