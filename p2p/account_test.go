@@ -223,4 +223,5 @@ func TestNewAccountFromPrivateKey(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, acc2)
 	assert.Equal(t, acc.ID(), acc2.ID())
+	assert.Equal(t, acc.Address(), acc2.Address())
 }

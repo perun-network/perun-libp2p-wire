@@ -40,37 +40,8 @@ The `Dialer` requires the other peers to be already "registered" to connect with
 
 Example (register peer before propose a channel with them):
 ````go
-// OpenChannel opens a new channel with the specified peer and funding.
-func (c *PaymentClient) OpenChannel(peer wire.Address, peerID string, amount float64) *PaymentChannel {
-	....
-	```
-	c.net.Dialer.Register(peer, peerID)
-	```
-	... 
-
-	// Prepare the channel proposal by defining the channel parameters.
-	challengeDuration := uint64(10) // On-chain challenge duration in seconds.
-	proposal, err := client.NewLedgerChannelProposal(
-		challengeDuration,
-		c.account,
-		initAlloc,
-		participants,
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	// Send the proposal.
-	ch, err := c.perunClient.ProposeChannel(context.TODO(), proposal)
-	if err != nil {
-		panic(err)
-	}
-
-	// Start the on-chain event watcher. It automatically handles disputes.
-	c.startWatching(ch)
-
-	return newPaymentChannel(ch, c.currency)
-}
+// Must be called at least once before attempting to connect with peer. 
+net.Dialer.Register(peer, peerID)
 ````
 
 ## Address Ressolver
