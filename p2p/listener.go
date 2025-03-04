@@ -1,8 +1,8 @@
 package p2p
 
 import (
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pkg/errors"
 	"perun.network/go-perun/wire"
 	wirenet "perun.network/go-perun/wire/net"

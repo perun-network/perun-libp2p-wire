@@ -14,6 +14,7 @@ func TestNewAccount(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	acc := NewRandomAccount(rng)
 	assert.NotNil(t, acc)
+	defer acc.Close()
 }
 
 func getHost(t *testing.T) *Account {
@@ -27,6 +28,7 @@ func TestAddressBookRegister(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	acc := NewRandomAccount(rng)
 	assert.NotNil(t, acc)
+	defer acc.Close()
 
 	onChainAddr := sim_wallet.NewRandomAddress(rng)
 
@@ -41,6 +43,8 @@ func TestAddressBookRegisterEmptyAddress(t *testing.T) {
 	acc := NewRandomAccount(rng)
 	assert.NotNil(t, acc)
 
+	defer acc.Close()
+
 	emptyAddr := &sim_wallet.Address{}
 
 	assert.Panics(t, func() { acc.RegisterOnChainAddress(emptyAddr) })
@@ -54,6 +58,7 @@ func TestAddressBookDeregister(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	acc := NewRandomAccount(rng)
 	assert.NotNil(t, acc)
+	defer acc.Close()
 
 	onChainAddr := sim_wallet.NewRandomAddress(rng)
 
@@ -74,9 +79,12 @@ func TestAddressBookDeregisterPeer(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	acc := NewRandomAccount(rng)
 	assert.NotNil(t, acc)
+	defer acc.Close()
 
 	peer := NewRandomAccount(rng)
 	assert.NotNil(t, peer)
+	defer peer.Close()
+
 	onChainAddr := sim_wallet.NewRandomAddress(rng)
 	peerOnChainAddr := sim_wallet.NewRandomAddress(rng)
 
@@ -112,6 +120,7 @@ func TestAddressBookQuery_Fail(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	acc := NewRandomAccount(rng)
 	assert.NotNil(t, acc)
+	defer acc.Close()
 
 	onChainAddr := sim_wallet.NewRandomAddress(rng)
 
@@ -123,6 +132,7 @@ func TestAddressBookQuery(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	acc := NewRandomAccount(rng)
 	assert.NotNil(t, acc)
+	defer acc.Close()
 
 	onChainAddr := sim_wallet.NewRandomAddress(rng)
 
@@ -146,9 +156,12 @@ func TestAddressBookQueryPeer(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	acc := NewRandomAccount(rng)
 	assert.NotNil(t, acc)
+	defer acc.Close()
 
 	peer := NewRandomAccount(rng)
 	assert.NotNil(t, peer)
+	defer peer.Close()
+
 	onChainAddr := sim_wallet.NewRandomAddress(rng)
 	peerOnChainAddr := sim_wallet.NewRandomAddress(rng)
 
@@ -178,6 +191,7 @@ func TestAddressBookRegisterQueryMultiple(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	acc := NewRandomAccount(rng)
 	assert.NotNil(t, acc)
+	defer acc.Close()
 
 	onChainAddr := sim_wallet.NewRandomAddress(rng)
 	onChainAddr2 := sim_wallet.NewRandomAddress(rng)

@@ -10,9 +10,12 @@ import (
 	"net"
 
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	swarm "github.com/libp2p/go-libp2p/p2p/net/swarm"
+	libp2pclient "github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/client"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"perun.network/go-perun/wallet"
@@ -75,7 +78,6 @@ func NewAccountFromPrivateKeyBytes(prvKeyBytes []byte) (*Account, error) {
 	// Identity(prvKey)		- Use a RSA private key to generate the ID of the host.
 	// EnableRelay()		- Enable relay system and configures itself as a node behind a NAT
 	client, err := libp2p.New(
-		context.Background(),
 		libp2p.Identity(prvKey),
 		libp2p.EnableRelay(),
 	)
@@ -87,6 +89,15 @@ func NewAccountFromPrivateKeyBytes(prvKeyBytes []byte) (*Account, error) {
 		client.Close()
 		return nil, errors.WithMessage(err, "connecting to the relay server")
 	}
+
+	// Reserve connection
+	// Hosts that want to have messages relayed on their behalf need to reserve a slot
+	// with the circuit relay service host
+	_, err = libp2pclient.Reserve(context.Background(), client, *relayInfo)
+	if err != nil {
+		panic(errors.WithMessage(err, "failed to receive a relay reservation from relay server"))
+	}
+
 	return &Account{client, relayAddr, prvKey}, nil
 }
 
@@ -107,7 +118,7 @@ func NewRandomAccount(rng *rand.Rand) *Account {
 	// Identity(prvKey)		- Use a RSA private key to generate the ID of the host.
 	// EnableRelay()		- Enable relay system and configures itself as a node behind a NAT
 	client, err := libp2p.New(
-		context.Background(),
+		libp2p.NoListenAddrs,
 		libp2p.Identity(prvKey),
 		libp2p.EnableRelay(),
 	)
@@ -116,10 +127,21 @@ func NewRandomAccount(rng *rand.Rand) *Account {
 		panic(err)
 	}
 
+	// Redialing hacked
+	client.Network().(*swarm.Swarm).Backoff().Clear(*&relayInfo.ID)
 	if err := client.Connect(context.Background(), *relayInfo); err != nil {
 		client.Close()
 		panic(errors.WithMessage(err, "connecting to the relay server"))
 	}
+
+	// Reserve connection
+	// Hosts that want to have messages relayed on their behalf need to reserve a slot
+	// with the circuit relay service host
+	_, err = libp2pclient.Reserve(context.Background(), client, *relayInfo)
+	if err != nil {
+		panic(errors.WithMessage(err, "failed to receive a relay reservation from relay server"))
+	}
+
 	return &Account{client, relayAddr, prvKey}
 }
 
@@ -131,7 +153,7 @@ func (acc *Account) RegisterOnChainAddress(onChainAddr wallet.Address) error {
 		return err
 	}
 
-	s, err := acc.NewStream(context.Background(), id, registerProtocol)
+	s, err := acc.NewStream(network.WithAllowLimitedConn(context.Background(), registerProtocol[1:]), id, registerProtocol)
 	if err != nil {
 		return errors.WithMessage(err, "creating new stream")
 	}
@@ -162,7 +184,7 @@ func (acc *Account) RegisterOnChainAddress(onChainAddr wallet.Address) error {
 
 // Close closes the account.
 func (acc *Account) Close() error {
-	return acc.Close()
+	return acc.Host.Close()
 }
 
 // DeregisterOnChainAddress deregisters an on-chain address with the account from the relay-server's address book.
@@ -172,7 +194,7 @@ func (acc *Account) DeregisterOnChainAddress(onChainAddr wallet.Address) error {
 		return errors.WithMessage(err, "getting relay server info")
 	}
 
-	s, err := acc.NewStream(context.Background(), relayInfo.ID, removeProtocol)
+	s, err := acc.NewStream(network.WithAllowLimitedConn(context.Background(), removeProtocol[1:]), relayInfo.ID, removeProtocol)
 	if err != nil {
 		return errors.WithMessage(err, "creating new stream")
 	}
@@ -206,7 +228,7 @@ func (acc *Account) QueryOnChainAddress(onChainAddr wallet.Address) (*Address, e
 		return nil, err
 	}
 
-	s, err := acc.NewStream(context.Background(), id, queryProtocol)
+	s, err := acc.NewStream(network.WithAllowLimitedConn(context.Background(), queryProtocol[1:]), id, queryProtocol)
 	if err != nil {
 		return nil, errors.WithMessage(err, "creating new stream")
 	}
