@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"math/rand"
 
@@ -66,7 +67,9 @@ func (a *Address) Verify(msg []byte, sig []byte) error {
 		return fmt.Errorf("extracting public key: %w", err)
 	}
 
-	b, err := publicKey.Verify(msg, sig)
+	hashed := sha256.Sum256(msg)
+
+	b, err := publicKey.Verify(hashed[:], sig)
 	if err != nil {
 		return fmt.Errorf("verifying signature: %w", err)
 	}

@@ -230,11 +230,16 @@ func TestNewAccountFromPrivateKey(t *testing.T) {
 	acc := NewRandomAccount(rng)
 	assert.NotNil(t, acc)
 
+	defer acc.Close()
+
 	keyBytes, err := acc.MarshalPrivateKey()
 	assert.NoError(t, err)
 
 	acc2, err := NewAccountFromPrivateKeyBytes(keyBytes)
 	assert.NoError(t, err)
+
+	defer acc2.Close()
+
 	assert.NotNil(t, acc2)
 	assert.Equal(t, acc.ID(), acc2.ID())
 	assert.Equal(t, acc.Address(), acc2.Address())
