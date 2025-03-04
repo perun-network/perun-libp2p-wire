@@ -109,7 +109,7 @@ func NewRandomAccount(rng *rand.Rand) *Account {
 	}
 
 	// Creates a new RSA key pair for this host.
-	prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rng)
+	prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, 2048, rng)
 	if err != nil {
 		panic(err)
 	}
