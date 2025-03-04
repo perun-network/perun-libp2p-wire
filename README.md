@@ -1,7 +1,7 @@
 # Perun LibP2P Wire
 
 ## Introduction
-This repository serves as an implementation of the `wire` package in [Go-Perun] v0.10.6, which use the technology of [Go-Libp2p] (v0.13.0). This implementation realise the `Account` as libp2p's `host.Host` and `Address` as libp2p's `PeerID`.
+This repository serves as an implementation of the `wire` package in [Go-Perun] v0.12.0, which use the technology of [Go-Libp2p] (v0.41.0). This implementation realise the `Account` as libp2p's `host.Host` and `Address` as libp2p's `PeerID`.
 
 The Account will automatically connect to [Perun-Relay-Server] after creation, allowing for peer-to-peer connection with other clients, if their Addresses (PeerIDs) are already known.
 

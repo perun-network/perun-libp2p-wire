@@ -4,8 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	swarm "github.com/libp2p/go-libp2p/p2p/net/swarm"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"perun.network/go-perun/wire"
@@ -45,6 +47,7 @@ func (d *Dialer) Dial(ctx context.Context, addr wire.Address, serializer wire.En
 		return nil, errors.Wrap(err, "peer ID is not valid")
 	}
 
+	d.host.Network().(*swarm.Swarm).Backoff().Clear(_peerID)
 	fullAddr := d.relayAddr + "/p2p/" + d.relayID + "/p2p-circuit/p2p/" + _peerID.String()
 	peerMultiAddr, err := ma.NewMultiaddr(fullAddr)
 	if err != nil {
@@ -59,7 +62,7 @@ func (d *Dialer) Dial(ctx context.Context, addr wire.Address, serializer wire.En
 		return nil, errors.Wrap(err, "failed to dial peer: failed to connecting to peer")
 	}
 
-	s, err := d.host.NewStream(ctx, peerAddrInfo.ID, "/client")
+	s, err := d.host.NewStream(network.WithAllowLimitedConn(ctx, "client"), peerAddrInfo.ID, "/client")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial peer: failed to creating a new stream")
 	}
