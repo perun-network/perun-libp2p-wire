@@ -10,6 +10,7 @@ import (
 	swarm "github.com/libp2p/go-libp2p/p2p/net/swarm"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"perun.network/go-perun/wallet"
 	"perun.network/go-perun/wire"
 	wirenet "perun.network/go-perun/wire/net"
 	pkgsync "polycry.pt/poly-go/sync"
@@ -26,18 +27,18 @@ type Dialer struct {
 }
 
 // NewP2PDialer creates a new dialer for the given account.
-func NewP2PDialer(acc *Account, relayID string, relayAddr string) *Dialer {
+func NewP2PDialer(acc *Account, relayID string) *Dialer {
 	return &Dialer{
 		host:      acc,
 		relayID:   relayID,
-		relayAddr: relayAddr,
+		relayAddr: acc.relayAddr,
 		peers:     make(map[wire.AddrKey]string),
 	}
 }
 
 // Dial implements Dialer.Dial().
-func (d *Dialer) Dial(ctx context.Context, addr wire.Address, serializer wire.EnvelopeSerializer) (wirenet.Conn, error) {
-	peerID, ok := d.get(wire.Key(addr))
+func (d *Dialer) Dial(ctx context.Context, addr map[wallet.BackendID]wire.Address, serializer wire.EnvelopeSerializer) (wirenet.Conn, error) {
+	peerID, ok := d.get(wire.Keys(addr))
 	if !ok {
 		return nil, errors.New("failed to dial peer: peer ID not found")
 	}
@@ -71,11 +72,10 @@ func (d *Dialer) Dial(ctx context.Context, addr wire.Address, serializer wire.En
 }
 
 // Register registers a p2p peer id for a peer wire address.
-func (d *Dialer) Register(addr wire.Address, peerID string) {
+func (d *Dialer) Register(addr map[wallet.BackendID]wire.Address, peerID string) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-
-	d.peers[wire.Key(addr)] = peerID
+	d.peers[wire.Keys(addr)] = peerID
 }
 
 // Close closes the dialer by closing the underlying libp2p host.

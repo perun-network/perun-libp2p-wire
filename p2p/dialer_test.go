@@ -8,17 +8,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"perun.network/go-perun/wallet"
 	"perun.network/go-perun/wire"
 	perunio "perun.network/go-perun/wire/perunio/serializer"
+	"perun.network/go-perun/wire/test"
 
 	ctxtest "polycry.pt/poly-go/context/test"
 	pkgtest "polycry.pt/poly-go/test"
 )
 
 func TestNewDialer(t *testing.T) {
-	h := getHost(t)
+	rng := pkgtest.Prng(t)
+	h := getHost(rng)
 
-	d := NewP2PDialer(h, relayID, h.relayAddr)
+	d := NewP2PDialer(h, relayID)
 	assert.NotNil(t, d)
 	d.Close()
 }
@@ -27,14 +30,16 @@ func TestDialer_Register(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	addr := NewRandomAddress(rng)
 	key := wire.Key(addr)
-	h := getHost(t)
-	d := NewP2PDialer(h, relayID, h.relayAddr)
+	h := getHost(rng)
+	d := NewP2PDialer(h, relayID)
 	defer d.Close()
 
 	_, ok := d.get(key)
 	require.False(t, ok)
 
-	d.Register(addr, "p2pAddress")
+	addrs := make(map[wallet.BackendID]wire.Address)
+	addrs[test.TestBackendID] = addr
+	d.Register(addrs, "p2pAddress")
 
 	host, ok := d.get(key)
 	assert.True(t, ok)
@@ -45,22 +50,26 @@ func TestDialer_Dial(t *testing.T) {
 	timeout := 1000 * time.Millisecond
 	rng := pkgtest.Prng(t)
 
-	lHost := getHost(t)
+	lHost := getHost(rng)
 	lAddr := lHost.Address()
+	laddrs := make(map[wallet.BackendID]wire.Address)
+	laddrs[test.TestBackendID] = lAddr
 	lpeerID := lHost.ID()
 	listener := NewP2PListener(lHost)
 	defer listener.Close()
 
-	dHost := getHost(t)
+	dHost := getHost(rng)
 	dAddr := dHost.Address()
-	dialer := NewP2PDialer(dHost, relayID, dHost.relayAddr)
-	dialer.Register(lAddr, lpeerID.String())
+	daddrs := make(map[wallet.BackendID]wire.Address)
+	daddrs[test.TestBackendID] = dAddr
+	dialer := NewP2PDialer(dHost, relayID)
+	dialer.Register(laddrs, lpeerID.String())
 	defer dialer.Close()
 
 	t.Run("happy", func(t *testing.T) {
 		e := &wire.Envelope{
-			Sender:    dAddr,
-			Recipient: lAddr,
+			Sender:    daddrs,
+			Recipient: laddrs,
 			Msg:       wire.NewPingMsg()}
 		ct := pkgtest.NewConcurrent(t)
 
@@ -76,7 +85,7 @@ func TestDialer_Dial(t *testing.T) {
 
 		ct.Stage("dial", func(rt pkgtest.ConcT) {
 			ctxtest.AssertTerminates(t, timeout, func() {
-				conn, err := dialer.Dial(context.Background(), lAddr, perunio.Serializer())
+				conn, err := dialer.Dial(context.Background(), laddrs, perunio.Serializer())
 				assert.NoError(t, err)
 				require.NotNil(rt, conn)
 
@@ -91,14 +100,14 @@ func TestDialer_Dial(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		ctxtest.AssertTerminates(t, timeout, func() {
-			conn, err := dialer.Dial(ctx, lAddr, perunio.Serializer())
+			conn, err := dialer.Dial(ctx, laddrs, perunio.Serializer())
 			assert.Nil(t, conn)
 			assert.Error(t, err)
 		})
 	})
 
 	t.Run("unknown host", func(t *testing.T) {
-		noHostAddr := NewRandomAddress(rng)
+		noHostAddr := map[wallet.BackendID]wire.Address{test.TestBackendID: NewRandomAddress(rng)}
 		dialer.Register(noHostAddr, "no such host")
 
 		ctxtest.AssertTerminates(t, timeout, func() {
@@ -110,7 +119,7 @@ func TestDialer_Dial(t *testing.T) {
 
 	t.Run("unknown address", func(t *testing.T) {
 		ctxtest.AssertTerminates(t, timeout, func() {
-			unknownAddr := NewRandomAddress(rng)
+			unknownAddr := map[wallet.BackendID]wire.Address{test.TestBackendID: NewRandomAddress(rng)}
 			conn, err := dialer.Dial(context.Background(), unknownAddr, perunio.Serializer())
 			assert.Error(t, err)
 			assert.Nil(t, conn)
@@ -120,8 +129,9 @@ func TestDialer_Dial(t *testing.T) {
 
 func TestDialer_Close(t *testing.T) {
 	t.Run("double close", func(t *testing.T) {
-		h := getHost(t)
-		d := NewP2PDialer(h, relayID, h.relayAddr)
+		rng := pkgtest.Prng(t)
+		h := getHost(rng)
+		d := NewP2PDialer(h, relayID)
 
 		assert.NoError(t, d.Close(), "first close must not return error")
 		assert.Error(t, d.Close(), "second close must result in error")
