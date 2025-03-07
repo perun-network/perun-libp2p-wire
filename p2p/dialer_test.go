@@ -16,9 +16,10 @@ import (
 )
 
 func TestNewDialer(t *testing.T) {
-	h := getHost(t)
+	rng := pkgtest.Prng(t)
+	h := getHost(rng)
 
-	d := NewP2PDialer(h, relayID, h.relayAddr)
+	d := NewP2PDialer(h, relayID)
 	assert.NotNil(t, d)
 	d.Close()
 }
@@ -27,8 +28,8 @@ func TestDialer_Register(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	addr := NewRandomAddress(rng)
 	key := wire.Key(addr)
-	h := getHost(t)
-	d := NewP2PDialer(h, relayID, h.relayAddr)
+	h := getHost(rng)
+	d := NewP2PDialer(h, relayID)
 	defer d.Close()
 
 	_, ok := d.get(key)
@@ -45,15 +46,15 @@ func TestDialer_Dial(t *testing.T) {
 	timeout := 1000 * time.Millisecond
 	rng := pkgtest.Prng(t)
 
-	lHost := getHost(t)
+	lHost := getHost(rng)
 	lAddr := lHost.Address()
 	lpeerID := lHost.ID()
 	listener := NewP2PListener(lHost)
 	defer listener.Close()
 
-	dHost := getHost(t)
+	dHost := getHost(rng)
 	dAddr := dHost.Address()
-	dialer := NewP2PDialer(dHost, relayID, dHost.relayAddr)
+	dialer := NewP2PDialer(dHost, relayID)
 	dialer.Register(lAddr, lpeerID.String())
 	defer dialer.Close()
 
@@ -120,8 +121,9 @@ func TestDialer_Dial(t *testing.T) {
 
 func TestDialer_Close(t *testing.T) {
 	t.Run("double close", func(t *testing.T) {
-		h := getHost(t)
-		d := NewP2PDialer(h, relayID, h.relayAddr)
+		rng := pkgtest.Prng(t)
+		h := getHost(rng)
+		d := NewP2PDialer(h, relayID)
 
 		assert.NoError(t, d.Close(), "first close must not return error")
 		assert.Error(t, d.Close(), "second close must result in error")

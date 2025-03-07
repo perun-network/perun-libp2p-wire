@@ -17,7 +17,7 @@ type Net struct {
 // and includes them in the returned P2P Net.
 func NewP2PBus(acc *Account) (*Net, error) {
 	listener := NewP2PListener(acc)
-	dialer := NewP2PDialer(acc, relayID, acc.relayAddr)
+	dialer := NewP2PDialer(acc, relayID)
 	bus := net.NewBus(acc, dialer, perunio.Serializer())
 	return &Net{Bus: bus, Dialer: dialer, Listener: listener, PeerID: acc.ID().String()}, nil
 }
