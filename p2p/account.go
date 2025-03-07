@@ -78,6 +78,7 @@ func NewAccountFromPrivateKeyBytes(prvKeyBytes []byte) (*Account, error) {
 	// Identity(prvKey)		- Use a RSA private key to generate the ID of the host.
 	// EnableRelay()		- Enable relay system and configures itself as a node behind a NAT
 	client, err := libp2p.New(
+		libp2p.NoListenAddrs,
 		libp2p.Identity(prvKey),
 		libp2p.EnableRelay(),
 	)
@@ -85,6 +86,7 @@ func NewAccountFromPrivateKeyBytes(prvKeyBytes []byte) (*Account, error) {
 		return nil, errors.WithMessage(err, "creating new libp2p client")
 	}
 
+	client.Network().(*swarm.Swarm).Backoff().Clear(*&relayInfo.ID)
 	if err := client.Connect(context.Background(), *relayInfo); err != nil {
 		client.Close()
 		return nil, errors.WithMessage(err, "connecting to the relay server")

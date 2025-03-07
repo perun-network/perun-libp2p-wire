@@ -26,11 +26,11 @@ type Dialer struct {
 }
 
 // NewP2PDialer creates a new dialer for the given account.
-func NewP2PDialer(acc *Account, relayID string, relayAddr string) *Dialer {
+func NewP2PDialer(acc *Account, relayID string) *Dialer {
 	return &Dialer{
 		host:      acc,
 		relayID:   relayID,
-		relayAddr: relayAddr,
+		relayAddr: acc.relayAddr,
 		peers:     make(map[wire.AddrKey]string),
 	}
 }

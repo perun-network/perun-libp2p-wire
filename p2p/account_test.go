@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"math/rand"
 	"testing"
 	"time"
 
@@ -17,10 +18,8 @@ func TestNewAccount(t *testing.T) {
 	defer acc.Close()
 }
 
-func getHost(t *testing.T) *Account {
-	rng := pkgtest.Prng(t)
+func getHost(rng *rand.Rand) *Account {
 	acc := NewRandomAccount(rng)
-	assert.NotNil(t, acc)
 	return acc
 }
 
