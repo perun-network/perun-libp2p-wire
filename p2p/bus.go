@@ -1,6 +1,8 @@
 package p2p
 
 import (
+	"perun.network/go-perun/wallet"
+	"perun.network/go-perun/wire"
 	"perun.network/go-perun/wire/net"
 	perunio "perun.network/go-perun/wire/perunio/serializer"
 )
@@ -15,9 +17,12 @@ type Net struct {
 
 // NewP2PBus creates a dialer, listener, and a bus for the given account `acc`
 // and includes them in the returned P2P Net.
-func NewP2PBus(acc *Account) (*Net, error) {
+func NewP2PBus(backendID wallet.BackendID, acc *Account) (*Net, error) {
 	listener := NewP2PListener(acc)
 	dialer := NewP2PDialer(acc, relayID)
-	bus := net.NewBus(acc, dialer, perunio.Serializer())
-	return &Net{Bus: bus, Dialer: dialer, Listener: listener, PeerID: acc.ID().String()}, nil
+	id := make(map[wallet.BackendID]wire.Account)
+	id[backendID] = acc
+
+	bus := net.NewBus(id, dialer, perunio.Serializer())
+	return &Net{Bus: bus, Dialer: dialer, Listener: listener, PeerID: acc.relayAddr}, nil
 }
