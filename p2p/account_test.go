@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -21,7 +20,6 @@ func TestNewAccount(t *testing.T) {
 
 func getHost(rng *rand.Rand) *Account {
 	acc := NewRandomAccount(rng)
-	log.Println(acc.Host.ID())
 	return acc
 }
 

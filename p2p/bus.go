@@ -20,7 +20,6 @@ type Net struct {
 func NewP2PBus(backendID wallet.BackendID, acc *Account) (*Net, error) {
 	listener := NewP2PListener(acc)
 	dialer := NewP2PDialer(acc, relayID)
-
 	id := make(map[wallet.BackendID]wire.Account)
 	id[backendID] = acc
 
