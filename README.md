@@ -1,4 +1,7 @@
 # Perun LibP2P Wire
+## ⚠️ Archived Repository
+
+This repository has been archived and is no longer maintained. Please see [Go-Perun] if you're looking for the active implemetation.
 
 ## Introduction
 This repository serves as an implementation of the `wire` package in [Go-Perun] v0.13.0, using the technology of [Go-Libp2p] (v0.41.0). This implementation realises the `Account` as libp2p's `host.Host` and `Address` as libp2p's `PeerID`.
