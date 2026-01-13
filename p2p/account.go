@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	relayID = "QmVCPfUMr98PaaM8qbAQBgJ9jqc7XHpGp7AsyragdFDmgm"
+	relayID = "QmcxeYpYpYPX4J3478YZUaxFytYfUDbNe1jUWVYeZjL3gY"
 
 	queryProtocol    = "/address-book/query/1.0.0"    // Protocol for querying the relay-server for a peerID.
 	registerProtocol = "/address-book/register/1.0.0" // Protocol for registering an on-chain address with the relay-server.
@@ -181,6 +181,15 @@ func (acc *Account) RegisterOnChainAddress(onChainAddr wallet.Address) error {
 	if onChainAddr == nil {
 		return errors.New("on-chain address is nil")
 	}
+	bytesAddr, err := onChainAddr.MarshalBinary()
+	if err != nil {
+		return errors.WithMessage(err, "marshalling on-chain address to binary")
+	}
+	fmt.Println("RegisterOnChainAddress: ", onChainAddr.String())
+	if len(bytesAddr) == 0 {
+		return errors.New("on-chain address is empty")
+	}
+
 	registerData.OnChainAddress = onChainAddr.String()
 	registerData.PeerID = acc.ID().String()
 
